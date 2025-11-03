@@ -79,7 +79,7 @@
               <!-- NEW: X Slider --><input
                 type="range"
                 id="posXSlider"
-                step="1"
+                step="5"
                 class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-2"
               />
             </div>
@@ -100,7 +100,7 @@
               <!-- NEW: Y Slider --><input
                 type="range"
                 id="posYSlider"
-                step="1"
+                step="5"
                 class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-2"
               />
             </div>
@@ -255,10 +255,25 @@
           img.onload = () => {
             originalImage = img;
 
-            canvas.width = img.width;
-            canvas.height = img.height;
+            // Calculate scaled dimensions while maintaining aspect ratio
+            const maxDimension = 1500; // Limit max dimension to 1500px
+            let newWidth = img.width;
+            let newHeight = img.height;
+            
+            if (img.width > maxDimension || img.height > maxDimension) {
+                if (img.width > img.height) {
+                    newWidth = maxDimension;
+                    newHeight = (img.height * maxDimension) / img.width;
+                } else {
+                    newHeight = maxDimension;
+                    newWidth = (img.width * maxDimension) / img.height;
+                }
+            }
 
-            ctx.drawImage(img, 0, 0);
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+
+            ctx.drawImage(img, 0, 0, newWidth, newHeight);
 
             posX.value = Math.floor(canvas.width / 2);
             posY.value = Math.floor(canvas.height / 2); // Still canvas-relative for input, then inverted
@@ -363,6 +378,21 @@
         downloadLink.classList.remove("hidden");
       }
 
+      // Debounce function to limit how often the watermark is redrawn
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      const debouncedDrawWatermark = debounce(drawWatermark, 50);
+
       const allControls = [
         watermarkText,
         posX,
@@ -374,7 +404,7 @@
       ];
 
       allControls.forEach((control) => {
-        control.addEventListener("input", drawWatermark);
+        control.addEventListener("input", debouncedDrawWatermark);
       });
 
       posXSlider.addEventListener("input", () => {
