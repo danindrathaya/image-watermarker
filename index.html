@@ -187,7 +187,10 @@
           class="bg-gray-50 p-4 rounded-lg border border-gray-200 flex justify-center items-center min-h-[200px] relative"
         >
           <canvas id="imageCanvas" class="rounded-md shadow-inner"></canvas>
-          <p id="placeholderText" class="text-gray-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <p
+            id="placeholderText"
+            class="text-gray-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+          >
             Your image will appear here
           </p>
         </div>
@@ -228,8 +231,8 @@
       // Function to get formatted date
       function getCurrentDate() {
         const now = new Date();
-        const day = String(now.getDate()).padStart(2, '0');
-        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, "0");
+        const month = String(now.getMonth() + 1).padStart(2, "0");
         const year = now.getFullYear();
         return `${day}/${month}/${year}`;
       }
@@ -255,29 +258,42 @@
           img.onload = () => {
             originalImage = img;
 
-            // Calculate scaled dimensions while maintaining aspect ratio
-            const maxDimension = 1500; // Limit max dimension to 1500px
-            let newWidth = img.width;
-            let newHeight = img.height;
-            
-            if (img.width > maxDimension || img.height > maxDimension) {
-                if (img.width > img.height) {
-                    newWidth = maxDimension;
-                    newHeight = (img.height * maxDimension) / img.width;
-                } else {
-                    newHeight = maxDimension;
-                    newWidth = (img.width * maxDimension) / img.height;
-                }
+            // Set canvas to original image dimensions
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            // Draw at original size first
+            ctx.drawImage(img, 0, 0);
+
+            // If the image is large, create a compressed version
+            if (img.width > 1500 || img.height > 1500) {
+              // Create a temporary canvas for compression
+              const tempCanvas = document.createElement("canvas");
+              const tempCtx = tempCanvas.getContext("2d");
+
+              // Calculate scale factor to get a reasonable size for processing
+              const scaleFactor = Math.min(
+                1,
+                Math.min(1500 / img.width, 1500 / img.height)
+              );
+              tempCanvas.width = img.width * scaleFactor;
+              tempCanvas.height = img.height * scaleFactor;
+
+              // Draw scaled version
+              tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+
+              // Clear main canvas
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+              // Draw back to main canvas at original size with compression
+              ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+
+              // Clean up
+              tempCanvas.remove();
             }
-
-            canvas.width = newWidth;
-            canvas.height = newHeight;
-
-            ctx.drawImage(img, 0, 0, newWidth, newHeight);
-
             posX.value = Math.floor(canvas.width / 2);
             posY.value = Math.floor(canvas.height / 2); // Still canvas-relative for input, then inverted
-            
+
             // Show default watermark preview
             watermarkText.value = watermarkText.placeholder;
             drawWatermark();
